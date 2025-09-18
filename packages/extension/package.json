@@ -1,0 +1,142 @@
+﻿{
+  "name": "@cursor-time-tracking/extension",
+  "displayName": "Cursor AI Time Tracking",
+  "description": "Intelligent time tracking extension for Cursor with advanced idle detection",
+  "version": "0.1.0",
+  "main": "./dist/extension.js",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "timeTracking.webview",
+          "name": "Time Tracking",
+          "type": "webview",
+          "contextualTitle": "Cursor AI Time Tracking",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "timeTracking",
+          "title": "Time Tracking",
+          "icon": "$(clock)"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "timeTracking.start",
+        "title": "Start Time Tracking",
+        "icon": "$(play)"
+      },
+      {
+        "command": "timeTracking.stop", 
+        "title": "Stop Time Tracking",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "timeTracking.pause",
+        "title": "Pause Time Tracking", 
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "timeTracking.showStats",
+        "title": "Show Time Tracking Stats",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "timeTracking.openWebview",
+        "title": "Open Time Tracking Panel",
+        "icon": "$(clock)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "timeTracking.start"
+        },
+        {
+          "command": "timeTracking.stop"
+        },
+        {
+          "command": "timeTracking.pause"
+        },
+        {
+          "command": "timeTracking.showStats"
+        },
+        {
+          "command": "timeTracking.openWebview"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "timeTracking.start",
+          "when": "view == timeTracking.webview",
+          "group": "navigation@1"
+        },
+        {
+          "command": "timeTracking.stop",
+          "when": "view == timeTracking.webview", 
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "timeTracking.start",
+        "key": "ctrl+shift+t s",
+        "mac": "cmd+shift+t s"
+      },
+      {
+        "command": "timeTracking.stop",
+        "key": "ctrl+shift+t x",
+        "mac": "cmd+shift+t x"
+      },
+      {
+        "command": "timeTracking.pause",
+        "key": "ctrl+shift+t p", 
+        "mac": "cmd+shift+t p"
+      },
+      {
+        "command": "timeTracking.showStats",
+        "key": "ctrl+shift+t i",
+        "mac": "cmd+shift+t i"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./", 
+    "dev": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix"
+  },
+  "dependencies": {
+    "@cursor-time-tracking/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.70.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vsce": "^2.15.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/cursor-ai-time-tracking.git"
+  },
+  "publisher": "cursor-time-tracking",
+  "license": "MIT"
+}

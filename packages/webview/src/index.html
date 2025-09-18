@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cursor AI Time Tracking</title>
+    
+    <!-- VS Code WebView Security -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'none'; 
+                   img-src vscode-resource: https: data:; 
+                   script-src vscode-resource: 'unsafe-inline'; 
+                   style-src vscode-resource: 'unsafe-inline';
+                   connect-src vscode-resource: https: wss:;">
+    
+    <!-- Prevent zooming in VS Code WebView -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>

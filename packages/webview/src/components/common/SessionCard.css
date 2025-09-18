@@ -1,0 +1,89 @@
+﻿.session-card {
+  background: rgba(128, 128, 128, 0.05);
+  border: 1px solid rgba(128, 128, 128, 0.1);
+  border-radius: var(--border-radius-large);
+  padding: var(--spacing-lg);
+  transition: var(--transition);
+}
+
+.session-card:hover {
+  border-color: rgba(128, 128, 128, 0.2);
+  box-shadow: var(--shadow-md);
+}
+
+.session-card.active {
+  border-color: var(--primary-color);
+  background: rgba(0, 122, 204, 0.05);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.session-project {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.project-icon {
+  font-size: var(--font-size-lg);
+}
+
+.project-name {
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.active-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--success-color);
+  font-size: var(--font-size-sm);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--success-color);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.session-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm) var(--spacing-lg);
+}
+
+.session-info > div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.label {
+  color: var(--secondary-color);
+  font-size: var(--font-size-sm);
+}
+
+.value {
+  color: var(--vscode-foreground);
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 768px) {
+  .session-info {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+}

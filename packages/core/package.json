@@ -1,0 +1,32 @@
+﻿{
+  "name": "@cursor-time-tracking/core",
+  "version": "1.0.0",
+  "description": "Core business logic and data management for Cursor AI Time Tracking",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "clean": "rimraf dist",
+    "test": "jest",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.3.0",
+    "date-fns": "^3.3.0",
+    "nanoid": "^5.0.4",
+    "tslib": "^2.6.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.9",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.0",
+    "jest": "^29.7.0",
+    "typescript": "^5.4.3",
+    "rimraf": "^5.0.5"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

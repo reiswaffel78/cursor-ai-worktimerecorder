@@ -1,0 +1,1402 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Cursor AI Time Tracking Extension API Contract",
+  "description": "JSON Schema for IPC communication between WebView and Extension",
+  "definitions": {
+    "timestamp": {
+      "type": "integer",
+      "description": "Unix timestamp in milliseconds",
+      "minimum": 0
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "UUID v4 format"
+    },
+    "messageBase": {
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Message type identifier"
+        },
+        "id": {
+          "$ref": "#/definitions/uuid",
+          "description": "Unique message identifier for request/response matching"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/timestamp",
+          "description": "When the message was created"
+        }
+      }
+    },
+    "errorResponse": {
+      "type": "object",
+      "required": ["type", "id", "error"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["error"]
+        },
+        "id": {
+          "$ref": "#/definitions/uuid",
+          "description": "ID of the request that caused this error"
+        },
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Error code identifier"
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error message"
+            },
+            "details": {
+              "type": "object",
+              "description": "Additional error details"
+            }
+          }
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": ["id", "startTime", "status"],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/uuid"
+        },
+        "startTime": {
+          "$ref": "#/definitions/timestamp"
+        },
+        "endTime": {
+          "$ref": "#/definitions/timestamp"
+        },
+        "duration": {
+          "type": "integer",
+          "description": "Duration in milliseconds",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "paused", "completed", "interrupted"]
+        },
+        "project": {
+          "type": "string",
+          "description": "Project identifier (e.g., git repository name)"
+        },
+        "file": {
+          "type": "string",
+          "description": "Current file path"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "complexity": {
+          "type": "number",
+          "description": "Complexity score (0-100)",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "stressLevel": {
+          "type": "number",
+          "description": "Detected stress level (0-100)",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "interruptions": {
+          "type": "integer",
+          "description": "Number of interruptions during session",
+          "minimum": 0
+        }
+      }
+    },
+    "dailyStats": {
+      "type": "object",
+      "required": ["date", "totalTime", "activeTime"],
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "totalTime": {
+          "type": "integer",
+          "description": "Total time in milliseconds"
+        },
+        "activeTime": {
+          "type": "integer",
+          "description": "Active time in milliseconds"
+        },
+        "deepWorkTime": {
+          "type": "integer",
+          "description": "Deep work time in milliseconds (sessions ≥ 25 min)"
+        },
+        "deepWorkPercentage": {
+          "type": "number",
+          "description": "Percentage of deep work time",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "sessionsCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "averageSessionLength": {
+          "type": "integer",
+          "description": "Average session length in milliseconds"
+        },
+        "contextSwitches": {
+          "type": "integer",
+          "description": "Number of context switches",
+          "minimum": 0
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "time": {
+                "type": "integer",
+                "description": "Time spent on project in milliseconds"
+              }
+            }
+          }
+        },
+        "goalCompletion": {
+          "type": "number",
+          "description": "Percentage of daily goal completed",
+          "minimum": 0
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "idleTimeout": {
+          "type": "integer",
+          "description": "Idle timeout in seconds",
+          "default": 90,
+          "minimum": 30,
+          "maximum": 600
+        },
+        "dailyGoal": {
+          "type": "integer",
+          "description": "Daily goal in minutes",
+          "default": 240,
+          "minimum": 15,
+          "maximum": 1440
+        },
+        "pomodoroLength": {
+          "type": "integer",
+          "description": "Pomodoro session length in minutes",
+          "default": 25,
+          "minimum": 5,
+          "maximum": 60
+        },
+        "breakLength": {
+          "type": "integer",
+          "description": "Break length in minutes",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 30
+        },
+        "longBreakLength": {
+          "type": "integer",
+          "description": "Long break length in minutes",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60
+        },
+        "pomodorosUntilLongBreak": {
+          "type": "integer",
+          "description": "Number of pomodoros until long break",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 10
+        },
+        "autoStartBreaks": {
+          "type": "boolean",
+          "default": true
+        },
+        "autoStartPomodoros": {
+          "type": "boolean",
+          "default": false
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "sessionEnd": {
+              "type": "boolean",
+              "default": true
+            },
+            "breakEnd": {
+              "type": "boolean",
+              "default": true
+            },
+            "idleDetected": {
+              "type": "boolean",
+              "default": true
+            },
+            "dailyGoalReached": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["system", "light", "dark"],
+          "default": "system"
+        },
+        "dataRetention": {
+          "type": "integer",
+          "description": "Data retention period in days",
+          "default": 365,
+          "minimum": 7,
+          "maximum": 3650
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "pomodoro": {
+              "type": "boolean",
+              "default": true
+            },
+            "aiAnalytics": {
+              "type": "boolean",
+              "default": false
+            },
+            "healthMonitoring": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/messages/requests" },
+    { "$ref": "#/messages/responses" },
+    { "$ref": "#/messages/notifications" },
+    { "$ref": "#/definitions/errorResponse" }
+  ],
+  "messages": {
+    "requests": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["startSession"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "project": { "type": "string" },
+                "tags": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["pauseSession"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "sessionId": { "$ref": "#/definitions/uuid" },
+                "reason": {
+                  "type": "string",
+                  "enum": ["manual", "idle", "break", "meeting"]
+                }
+              },
+              "required": ["sessionId"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["resumeSession"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "sessionId": { "$ref": "#/definitions/uuid" }
+              },
+              "required": ["sessionId"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["stopSession"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "sessionId": { "$ref": "#/definitions/uuid" },
+                "reason": {
+                  "type": "string",
+                  "enum": ["completed", "abandoned", "editorClosed"]
+                }
+              },
+              "required": ["sessionId"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getSessionStatus"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "sessionId": { "$ref": "#/definitions/uuid" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getSessions"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "startDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "endDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "project": { "type": "string" },
+                "tags": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["active", "paused", "completed", "interrupted"]
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1000,
+                  "default": 100
+                },
+                "offset": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getDailyStats"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getWeeklyStats"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "startDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "endDate": {
+                  "type": "string",
+                  "format": "date"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getMonthlyStats"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "year": {
+                  "type": "integer",
+                  "minimum": 2020,
+                  "maximum": 2100
+                },
+                "month": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getProjectStats"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "project": { "type": "string" },
+                "startDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "endDate": {
+                  "type": "string",
+                  "format": "date"
+                }
+              },
+              "required": ["project"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getSettings"] },
+            "id": { "$ref": "#/definitions/uuid" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["updateSettings"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "$ref": "#/definitions/settings"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["resetSettings"] },
+            "id": { "$ref": "#/definitions/uuid" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["exportData"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "enum": ["json", "csv", "xlsx"],
+                  "default": "json"
+                },
+                "startDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "endDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "includeProjects": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "includeTags": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "encrypted": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "password": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["startPomodoro"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "duration": {
+                  "type": "integer",
+                  "description": "Duration in minutes",
+                  "minimum": 1,
+                  "maximum": 120
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["stopPomodoro"] },
+            "id": { "$ref": "#/definitions/uuid" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["startBreak"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "duration": {
+                  "type": "integer",
+                  "description": "Duration in minutes",
+                  "minimum": 1,
+                  "maximum": 60
+                },
+                "isLongBreak": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["stopBreak"] },
+            "id": { "$ref": "#/definitions/uuid" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["tagSession"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "sessionId": { "$ref": "#/definitions/uuid" },
+                "tags": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "required": ["sessionId", "tags"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getAvailableTags"] },
+            "id": { "$ref": "#/definitions/uuid" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getProjects"] },
+            "id": { "$ref": "#/definitions/uuid" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["getHealthMetrics"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "responses": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["startSessionResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["session"],
+              "properties": {
+                "session": { "$ref": "#/definitions/session" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["pauseSessionResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "session"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "session": { "$ref": "#/definitions/session" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["resumeSessionResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "session"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "session": { "$ref": "#/definitions/session" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["stopSessionResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "session"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "session": { "$ref": "#/definitions/session" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getSessionStatusResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["session"],
+              "properties": {
+                "session": { "$ref": "#/definitions/session" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getSessionsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["sessions", "total"],
+              "properties": {
+                "sessions": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/session" }
+                },
+                "total": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getDailyStatsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["stats"],
+              "properties": {
+                "stats": { "$ref": "#/definitions/dailyStats" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getWeeklyStatsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["stats"],
+              "properties": {
+                "stats": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/dailyStats" }
+                },
+                "summary": {
+                  "type": "object",
+                  "properties": {
+                    "totalTime": { "type": "integer" },
+                    "activeTime": { "type": "integer" },
+                    "deepWorkTime": { "type": "integer" },
+                    "deepWorkPercentage": { "type": "number" },
+                    "sessionsCount": { "type": "integer" },
+                    "averageSessionLength": { "type": "integer" },
+                    "contextSwitches": { "type": "integer" },
+                    "averageDailyTime": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getMonthlyStatsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["stats"],
+              "properties": {
+                "stats": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/dailyStats" }
+                },
+                "summary": {
+                  "type": "object",
+                  "properties": {
+                    "totalTime": { "type": "integer" },
+                    "activeTime": { "type": "integer" },
+                    "deepWorkTime": { "type": "integer" },
+                    "deepWorkPercentage": { "type": "number" },
+                    "sessionsCount": { "type": "integer" },
+                    "averageSessionLength": { "type": "integer" },
+                    "contextSwitches": { "type": "integer" },
+                    "averageDailyTime": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getProjectStatsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["project", "stats"],
+              "properties": {
+                "project": { "type": "string" },
+                "stats": {
+                  "type": "object",
+                  "properties": {
+                    "totalTime": { "type": "integer" },
+                    "sessionsCount": { "type": "integer" },
+                    "averageSessionLength": { "type": "integer" },
+                    "lastActive": { "$ref": "#/definitions/timestamp" },
+                    "dailyBreakdown": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": { "type": "string", "format": "date" },
+                          "time": { "type": "integer" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getSettingsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "$ref": "#/definitions/settings"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["updateSettingsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "settings"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "settings": { "$ref": "#/definitions/settings" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["resetSettingsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "settings"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "settings": { "$ref": "#/definitions/settings" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["exportDataResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "filePath"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "filePath": { "type": "string" },
+                "format": {
+                  "type": "string",
+                  "enum": ["json", "csv", "xlsx"]
+                },
+                "encrypted": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["startPomodoroResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "pomodoroId", "endTime"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "pomodoroId": { "$ref": "#/definitions/uuid" },
+                "startTime": { "$ref": "#/definitions/timestamp" },
+                "endTime": { "$ref": "#/definitions/timestamp" },
+                "duration": { "type": "integer" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["stopPomodoroResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success"],
+              "properties": {
+                "success": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["startBreakResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "breakId", "endTime"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "breakId": { "$ref": "#/definitions/uuid" },
+                "startTime": { "$ref": "#/definitions/timestamp" },
+                "endTime": { "$ref": "#/definitions/timestamp" },
+                "duration": { "type": "integer" },
+                "isLongBreak": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["stopBreakResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success"],
+              "properties": {
+                "success": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["tagSessionResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["success", "session"],
+              "properties": {
+                "success": { "type": "boolean" },
+                "session": { "$ref": "#/definitions/session" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getAvailableTagsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["tags"],
+              "properties": {
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "usageCount": { "type": "integer" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getProjectsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["projects"],
+              "properties": {
+                "projects": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "totalTime": { "type": "integer" },
+                      "lastActive": { "$ref": "#/definitions/timestamp" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "id", "payload"],
+          "properties": {
+            "type": { "enum": ["getHealthMetricsResponse"] },
+            "id": { "$ref": "#/definitions/uuid" },
+            "payload": {
+              "type": "object",
+              "required": ["metrics"],
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "stressLevel": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "burnoutRisk": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "focusScore": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "breakCompliance": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "workLifeBalance": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "recommendations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["break", "posture", "hydration", "exercise", "focus"]
+                          },
+                          "message": { "type": "string" },
+                          "priority": {
+                            "type": "string",
+                            "enum": ["low", "medium", "high"]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "notifications": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["statusUpdate"] },
+            "payload": {
+              "type": "object",
+              "required": ["session"],
+              "properties": {
+                "session": { "$ref": "#/definitions/session" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["idleDetected"] },
+            "payload": {
+              "type": "object",
+              "required": ["sessionId", "idleTime"],
+              "properties": {
+                "sessionId": { "$ref": "#/definitions/uuid" },
+                "idleTime": {
+                  "type": "integer",
+                  "description": "Idle time in seconds"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["focusTimeUpdate"] },
+            "payload": {
+              "type": "object",
+              "required": ["dailyTotal", "goalPercentage"],
+              "properties": {
+                "dailyTotal": {
+                  "type": "integer",
+                  "description": "Total focus time today in milliseconds"
+                },
+                "goalPercentage": {
+                  "type": "number",
+                  "description": "Percentage of daily goal completed",
+                  "minimum": 0
+                },
+                "weeklyTotal": {
+                  "type": "integer",
+                  "description": "Total focus time this week in milliseconds"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["pomodoroUpdate"] },
+            "payload": {
+              "type": "object",
+              "required": ["pomodoroId", "remainingTime", "status"],
+              "properties": {
+                "pomodoroId": { "$ref": "#/definitions/uuid" },
+                "remainingTime": {
+                  "type": "integer",
+                  "description": "Remaining time in seconds"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["active", "completed", "interrupted"]
+                },
+                "completedCount": {
+                  "type": "integer",
+                  "description": "Number of completed pomodoros in current set"
+                },
+                "totalCount": {
+                  "type": "integer",
+                  "description": "Total pomodoros before long break"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["breakUpdate"] },
+            "payload": {
+              "type": "object",
+              "required": ["breakId", "remainingTime", "status"],
+              "properties": {
+                "breakId": { "$ref": "#/definitions/uuid" },
+                "remainingTime": {
+                  "type": "integer",
+                  "description": "Remaining time in seconds"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["active", "completed", "interrupted"]
+                },
+                "isLongBreak": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["goalReached"] },
+            "payload": {
+              "type": "object",
+              "required": ["goalType", "achieved"],
+              "properties": {
+                "goalType": {
+                  "type": "string",
+                  "enum": ["daily", "weekly", "project", "custom"]
+                },
+                "achieved": {
+                  "type": "number",
+                  "description": "Amount achieved (e.g. minutes)"
+                },
+                "target": {
+                  "type": "number",
+                  "description": "Target amount"
+                },
+                "percentage": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["healthAlert"] },
+            "payload": {
+              "type": "object",
+              "required": ["alertType", "message"],
+              "properties": {
+                "alertType": {
+                  "type": "string",
+                  "enum": ["break", "posture", "hydration", "burnout", "eyestrain"]
+                },
+                "message": { "type": "string" },
+                "severity": {
+                  "type": "string",
+                  "enum": ["info", "warning", "critical"]
+                },
+                "recommendation": { "type": "string" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["projectDetected"] },
+            "payload": {
+              "type": "object",
+              "required": ["project"],
+              "properties": {
+                "project": { "type": "string" },
+                "gitBranch": { "type": "string" },
+                "recentFiles": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "examples": {
+    "startSession": {
+      "type": "startSession",
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "payload": {
+        "project": "cursor-time-tracker",
+        "tags": ["feature", "api"]
+      }
+    },
+    "startSessionResponse": {
+      "type": "startSessionResponse",
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "payload": {
+        "session": {
+          "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          "startTime": 1625569800000,
+          "status": "active",
+          "project": "cursor-time-tracker",
+          "tags": ["feature", "api"]
+        }
+      }
+    },
+    "statusUpdate": {
+      "type": "statusUpdate",
+      "payload": {
+        "session": {
+          "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          "startTime": 1625569800000,
+          "duration": 1800000,
+          "status": "active",
+          "project": "cursor-time-tracker",
+          "file": "src/extension.ts",
+          "tags": ["feature", "api"]
+        }
+      }
+    },
+    "errorResponse": {
+      "type": "error",
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "error": {
+        "code": "SESSION_NOT_FOUND",
+        "message": "The specified session could not be found",
+        "details": {
+          "sessionId": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        }
+      }
+    }
+  },
+  "validationHelpers": {
+    "javascript": {
+      "validateMessage": "function validateMessage(message) {\n  // Simple validation function for JavaScript\n  if (!message || typeof message !== 'object') {\n    return { valid: false, error: 'Message must be an object' };\n  }\n  \n  if (!message.type || typeof message.type !== 'string') {\n    return { valid: false, error: 'Message must have a type property' };\n  }\n  \n  if (message.type.endsWith('Response') || !message.type.endsWith('Update')) {\n    if (!message.id || typeof message.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(message.id)) {\n      return { valid: false, error: 'Message must have a valid UUID id' };\n    }\n  }\n  \n  return { valid: true };\n}"
+    },
+    "typescript": {
+      "types": "// TypeScript type definitions\n\ntype UUID = string;\ntype Timestamp = number;\n\ninterface MessageBase {\n  type: string;\n  id: UUID;\n  timestamp?: Timestamp;\n}\n\ninterface ErrorResponse {\n  type: 'error';\n  id: UUID;\n  error: {\n    code: string;\n    message: string;\n    details?: Record<string, any>;\n  };\n}\n\ninterface Session {\n  id: UUID;\n  startTime: Timestamp;\n  endTime?: Timestamp;\n  duration?: number;\n  status: 'active' | 'paused' | 'completed' | 'interrupted';\n  project?: string;\n  file?: string;\n  tags?: string[];\n  complexity?: number;\n  stressLevel?: number;\n  interruptions?: number;\n}\n\ninterface DailyStats {\n  date: string;\n  totalTime: number;\n  activeTime: number;\n  deepWorkTime?: number;\n  deepWorkPercentage?: number;\n  sessionsCount: number;\n  averageSessionLength?: number;\n  contextSwitches?: number;\n  projects?: Array<{ name: string; time: number }>;\n  goalCompletion?: number;\n}\n\ninterface Settings {\n  idleTimeout?: number;\n  dailyGoal?: number;\n  pomodoroLength?: number;\n  breakLength?: number;\n  longBreakLength?: number;\n  pomodorosUntilLongBreak?: number;\n  autoStartBreaks?: boolean;\n  autoStartPomodoros?: boolean;\n  notifications?: {\n    sessionEnd?: boolean;\n    breakEnd?: boolean;\n    idleDetected?: boolean;\n    dailyGoalReached?: boolean;\n  };\n  theme?: 'system' | 'light' | 'dark';\n  dataRetention?: number;\n  features?: {\n    pomodoro?: boolean;\n    aiAnalytics?: boolean;\n    healthMonitoring?: boolean;\n  };\n}\n\n// Request types\ninterface StartSessionRequest extends MessageBase {\n  type: 'startSession';\n  payload?: {\n    project?: string;\n    tags?: string[];\n  };\n}\n\n// Response types\ninterface StartSessionResponse extends MessageBase {\n  type: 'startSessionResponse';\n  payload: {\n    session: Session;\n  };\n}\n\n// Notification types\ninterface StatusUpdateNotification {\n  type: 'statusUpdate';\n  payload: {\n    session: Session;\n  };\n}\n\n// Add more types as needed..."
+    }
+  }
+}
