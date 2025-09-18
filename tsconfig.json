@@ -1,0 +1,24 @@
+﻿{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "lib": ["ES2022"],
+    "moduleResolution": "node",
+    "strict": true,
+    "composite": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@cursor-time-tracking/core": ["packages/core/src"],
+      "@cursor-time-tracking/extension": ["packages/extension/src"],
+      "@cursor-time-tracking/webview": ["packages/webview/src"]
+    }
+  },
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/extension" },
+    { "path": "./packages/webview" }
+  ]
+}

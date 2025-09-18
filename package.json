@@ -1,0 +1,43 @@
+﻿{
+  "name": "cursor-ai-timetracking",
+  "version": "1.0.0",
+  "description": "Advanced time tracking extension for Cursor AI with intelligent session management",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspaces", 
+    "build:core": "npm run build --workspace=packages/core",
+    "build:extension": "npm run build --workspace=packages/extension",
+    "build:webview": "npm run build --workspace=packages/webview",
+    "dev:extension": "npm run dev --workspace=packages/extension",
+    "lint": "eslint packages/*/src --ext .ts,.tsx,.js,.jsx",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx,js,jsx,json}\"",
+    "test": "npm run test --workspaces",
+    "build:all": "npm run build:core && npm run build:extension && npm run build:webview"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.3"
+  },
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=18.0.0"
+  },
+  "main": "./packages/extension/dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursor-time-tracking.startSession",
+        "title": "Start Time Tracking"
+      }
+    ]
+  }
+}
